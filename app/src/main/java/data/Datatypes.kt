@@ -1,4 +1,4 @@
-package com.example.afinal.data
+package data
 
 data class UserData(
 
