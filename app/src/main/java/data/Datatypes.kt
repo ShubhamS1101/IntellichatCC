@@ -22,7 +22,9 @@ data class ChatData(
     val chatId : String,
     val user1: ChatUser = ChatUser(),
     val user2: ChatUser = ChatUser()
-)
+)/*{
+    constructor(): this("",ChatUser(),ChatUser())
+}*/
 
 data class ChatUser(
     val userId:String?="",
