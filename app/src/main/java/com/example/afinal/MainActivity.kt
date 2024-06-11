@@ -19,6 +19,7 @@ import screens.ChatListScreen
 import screens.LoginScreen
 import screens.ProfileScreen
 import screens.SignUpScreen
+import screens.SingleChatScreen
 import screens.StatusScreen
 
 sealed class DestinationScreen(var route: String){
@@ -66,6 +67,13 @@ class MainActivity : ComponentActivity() {
             }
             composable(DestinationScreen.ChatList.route){
                 ChatListScreen(navController,vm)
+            }
+            composable(DestinationScreen.SingleChat.route){
+
+                val chatId = it.arguments?.getString("chatId")
+                chatId?.let{
+                    SingleChatScreen(navController,vm,chatId)
+                }
             }
             composable(DestinationScreen.StatusList.route){
                 StatusScreen(navController,vm)

@@ -3,12 +3,19 @@ package com.example.afinal.ui.theme
 import android.net.Uri
 import android.util.Log
 import androidx.compose.runtime.mutableStateOf
+import androidx.core.text.isDigitsOnly
 import androidx.lifecycle.ViewModel
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.Filter
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.auth.User
 import com.google.firebase.firestore.toObject
+import com.google.firebase.firestore.toObjects
 import com.google.firebase.storage.FirebaseStorage
 import dagger.hilt.android.lifecycle.HiltViewModel
+import data.CHATS
+import data.ChatData
+import data.ChatUser
 import data.Event
 import data.USER_NODE
 import data.UserData
@@ -20,7 +27,7 @@ import javax.inject.Inject
 class LCViewModel @Inject constructor(
     val auth: FirebaseAuth,
     var db: FirebaseFirestore,
-    val storage : FirebaseStorage
+    val storage: FirebaseStorage
 ) : ViewModel() {
 
 
@@ -28,6 +35,7 @@ class LCViewModel @Inject constructor(
     var signIn = mutableStateOf(false)
     val eventMutableState = mutableStateOf<Event<String>?>(null)
     val userData = mutableStateOf<UserData?>(null)
+    val chats = mutableStateOf<List<ChatData>>(listOf())
 
     init {
 
@@ -37,7 +45,25 @@ class LCViewModel @Inject constructor(
             getUserData(it)
         }
     }
+    fun populateChats(){
+        db.collection(CHATS).where(
+            Filter.or(
+                Filter.equalTo("user1.userId",userData.value?.userId),
+                Filter.equalTo("user2.userId",userData.value?.userId)
+            )
+        ).addSnapshotListener{
+            value,error->
+            if(error!=null){
+                handleException(error)
 
+            }
+            if(value!=null){
+                chats.value = value.documents.mapNotNull {
+                    it.toObject<ChatData>()
+                }
+            }
+        }
+    }
 
     fun signUp(name: String, number: String, email: String, password: String) {
         inProgress.value = true
@@ -58,10 +84,10 @@ class LCViewModel @Inject constructor(
                         handleException(it.exception, customMessage = "Sign Up Failed")
                     }
                 }
-            } /*else {
+            } else {
                 handleException(customMessage = "Number Already Exists")
                 inProgress.value = false
-            }*/
+            }
         }
 
     }
@@ -72,28 +98,29 @@ class LCViewModel @Inject constructor(
         } else {
             inProgress.value = true
             auth.signInWithEmailAndPassword(email, password)
-                .addOnCompleteListener{
-                    if(it.isSuccessful){
+                .addOnCompleteListener {
+                    if (it.isSuccessful) {
                         signIn.value = true
                         inProgress.value = false
-                        auth.currentUser?.uid?.let{
+                        auth.currentUser?.uid?.let {
                             getUserData(it)
                         }
 
-                    }else{
-                        handleException(it.exception,"Login Failed")
+                    } else {
+                        handleException(it.exception, "Login Failed")
                     }
                 }
         }
     }
-    fun uploadProfileImage(uri: Uri){
-        uploadImage(uri){
+
+    fun uploadProfileImage(uri: Uri) {
+        uploadImage(uri) {
             createOrUpdateProfile(imageurl = it.toString())
 
         }
     }
 
-    fun uploadImage(uri: Uri,onSuccess:(Uri)->Unit){
+    fun uploadImage(uri: Uri, onSuccess: (Uri) -> Unit) {
         val storageref = storage.reference
         val uuid = UUID.randomUUID()
         val imageRef = storageref.child("images/$uuid")
@@ -102,11 +129,12 @@ class LCViewModel @Inject constructor(
             val result = it.metadata?.reference?.downloadUrl
             result?.addOnSuccessListener(onSuccess)
 
-            }
-            .addOnFailureListener{
-                handleException(it)
         }
+            .addOnFailureListener {
+                handleException(it)
+            }
     }
+
     fun createOrUpdateProfile(
         name: String? = null,
         number: String? = null,
@@ -144,9 +172,10 @@ class LCViewModel @Inject constructor(
                 handleException(error, "Cannot Retrieve User")
             }
             if (value != null) {
-                var user = value.toObject<UserData>()
+                val user = value.toObject<UserData>()
                 userData.value = user
                 inProgress.value = false
+                populateChats()
             }
         }
     }
@@ -165,6 +194,58 @@ class LCViewModel @Inject constructor(
         signIn.value = false
         userData.value = null
         eventMutableState.value = Event("Logged Out")
+    }
+
+    fun onAddChat(number: String) {
+        if (number.isEmpty() or !number.isDigitsOnly()) {
+            handleException(customMessage = "Number Must Contain Digits Only")
+        } else {
+            db.collection(CHATS).where(
+                Filter.or(
+                    Filter.and(
+                        Filter.equalTo("user1.number", number),
+                        Filter.equalTo("user2.number", userData.value?.number)
+                    ),
+                    Filter.and(
+                        Filter.equalTo("user1.number", userData.value?.number),
+                        Filter.equalTo("user2.number", number)
+                    )
+                )
+            ).get().addOnSuccessListener {
+                if (it.isEmpty) {
+                    db.collection(USER_NODE).whereEqualTo("number", number).get()
+                        .addOnSuccessListener {
+                            if (it.isEmpty) {
+                                handleException(customMessage = "Number not found")
+                            } else {
+                                val chatPartner = it.toObjects<UserData>()[0]
+                                val id = db.collection(CHATS).document().id
+                                val chat = ChatData(
+                                    chatId = id,
+                                    ChatUser(
+                                        userData.value?.userId,
+                                        userData.value?.name,
+                                        userData.value?.imageurl,
+                                        userData.value?.number
+                                    ),
+                                    ChatUser(
+                                        chatPartner.userId,
+                                        chatPartner.name,
+                                        chatPartner.imageurl,
+                                        chatPartner.number
+                                    )
+                                )
+                                db.collection(CHATS).document(id).set(chat)
+                            }
+                        }
+                        .addOnFailureListener {
+                            handleException(it)
+                        }
+                } else {
+                    handleException(customMessage = "Chats Already Exists")
+                }
+            }
+        }
     }
 }
 
