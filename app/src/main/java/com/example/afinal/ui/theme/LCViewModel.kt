@@ -71,6 +71,7 @@ class LCViewModel @Inject constructor(
             }
     }
 
+
     fun depopulateMessage(){
         chatMessages.value = listOf()
         currentChatMessageListener = null
@@ -95,12 +96,30 @@ class LCViewModel @Inject constructor(
         }
     }
 
-    fun onSendReply(chatId: String, message: String) {
+    /*fun onSendReply(chatId: String, message: String) {
         val time = Calendar.getInstance().time.toString()
         val msg = Message(userData.value?.userId, message, time)
 
         db.collection(CHATS).document(chatId).collection(MESSAGE).document().set(msg)
+    }*/
+    fun onSendReply(chatId: String, message: String) {
+        if (message.isEmpty()) {
+            handleException(customMessage = "Message cannot be empty")
+            return
+        }
+
+        val time = Calendar.getInstance().time.toString()
+        val msg = Message(userData.value?.userId, message, time)
+
+        db.collection(CHATS).document(chatId).collection(MESSAGE).add(msg)
+            .addOnSuccessListener {
+                Log.d("TAG", "Message sent successfully")
+            }
+            .addOnFailureListener {
+                handleException(it, "Failed to send message")
+            }
     }
+
 
     fun signUp(name: String, number: String, email: String, password: String) {
         inProgress.value = true
@@ -288,4 +307,3 @@ class LCViewModel @Inject constructor(
         }
     }
 }
-
