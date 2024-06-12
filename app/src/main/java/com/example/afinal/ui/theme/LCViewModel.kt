@@ -2,12 +2,14 @@ package com.example.afinal.ui.theme
 
 import android.net.Uri
 import android.util.Log
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.core.text.isDigitsOnly
 import androidx.lifecycle.ViewModel
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.Filter
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.auth.User
 import com.google.firebase.firestore.toObject
 import com.google.firebase.firestore.toObjects
@@ -17,9 +19,12 @@ import data.CHATS
 import data.ChatData
 import data.ChatUser
 import data.Event
+import data.MESSAGE
+import data.Message
 import data.USER_NODE
 import data.UserData
 import java.lang.Exception
+import java.util.Calendar
 import java.util.UUID
 import javax.inject.Inject
 
@@ -36,6 +41,9 @@ class LCViewModel @Inject constructor(
     val eventMutableState = mutableStateOf<Event<String>?>(null)
     val userData = mutableStateOf<UserData?>(null)
     val chats = mutableStateOf<List<ChatData>>(listOf())
+    val chatMessages = mutableStateOf<List<Message>>(listOf())
+    //val inProgressChatMessage = mutableStateOf(false)
+    var currentChatMessageListener: ListenerRegistration? = null
 
     init {
 
@@ -45,24 +53,53 @@ class LCViewModel @Inject constructor(
             getUserData(it)
         }
     }
-    fun populateChats(){
+
+    fun populateMessages(chatId: String) {
+        //inProgressChatMessage.value = true
+        currentChatMessageListener = db.collection(CHATS).document(chatId).collection(MESSAGE)
+            .addSnapshotListener { value, error ->
+                if(error!=null){
+                    handleException(error)
+
+                }
+                if(value!=null){
+                    chatMessages.value = value.documents.mapNotNull {
+                        it.toObject<Message>()
+                    }.sortedBy { it.timestamp }
+                    //inProgressChatMessage.value = false
+                }
+            }
+    }
+
+    fun depopulateMessage(){
+        chatMessages.value = listOf()
+        currentChatMessageListener = null
+    }
+
+    fun populateChats() {
         db.collection(CHATS).where(
             Filter.or(
-                Filter.equalTo("user1.userId",userData.value?.userId),
-                Filter.equalTo("user2.userId",userData.value?.userId)
+                Filter.equalTo("user1.userId", userData.value?.userId),
+                Filter.equalTo("user2.userId", userData.value?.userId)
             )
-        ).addSnapshotListener{
-            value,error->
-            if(error!=null){
+        ).addSnapshotListener { value, error ->
+            if (error != null) {
                 handleException(error)
 
             }
-            if(value!=null){
+            if (value != null) {
                 chats.value = value.documents.mapNotNull {
                     it.toObject<ChatData>()
                 }
             }
         }
+    }
+
+    fun onSendReply(chatId: String, message: String) {
+        val time = Calendar.getInstance().time.toString()
+        val msg = Message(userData.value?.userId, message, time)
+
+        db.collection(CHATS).document(chatId).collection(MESSAGE).document().set(msg)
     }
 
     fun signUp(name: String, number: String, email: String, password: String) {
@@ -193,6 +230,9 @@ class LCViewModel @Inject constructor(
         auth.signOut()
         signIn.value = false
         userData.value = null
+
+        depopulateMessage()
+        currentChatMessageListener = null
         eventMutableState.value = Event("Logged Out")
     }
 

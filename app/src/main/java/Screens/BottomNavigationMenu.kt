@@ -24,7 +24,7 @@ import kotlinx.coroutines.selects.select
 
 enum class BottomNavigationItem(val icon: Int, val navDestination: DestinationScreen) {
     CHATLIST(R.drawable.chat, DestinationScreen.ChatList),
-    STATUSLIST(R.drawable.status, DestinationScreen.StatusList),
+    //STATUSLIST(R.drawable.status, DestinationScreen.StatusList),
     PROFILE(R.drawable.profile, DestinationScreen.Profile)
 }
 
