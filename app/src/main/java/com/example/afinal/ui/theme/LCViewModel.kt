@@ -14,6 +14,9 @@ import com.google.firebase.firestore.auth.User
 import com.google.firebase.firestore.toObject
 import com.google.firebase.firestore.toObjects
 import com.google.firebase.storage.FirebaseStorage
+import com.google.mlkit.nl.smartreply.SmartReply
+import com.google.mlkit.nl.smartreply.SmartReplySuggestionResult
+import com.google.mlkit.nl.smartreply.TextMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import data.CHATS
 import data.ChatData
@@ -44,7 +47,7 @@ class LCViewModel @Inject constructor(
     val chatMessages = mutableStateOf<List<Message>>(listOf())
     //val inProgressChatMessage = mutableStateOf(false)
     var currentChatMessageListener: ListenerRegistration? = null
-
+    val smartReplies = mutableStateOf<List<String>>(listOf())
     init {
 
         val currentUser = auth.currentUser
@@ -55,18 +58,17 @@ class LCViewModel @Inject constructor(
     }
 
     fun populateMessages(chatId: String) {
-        //inProgressChatMessage.value = true
         currentChatMessageListener = db.collection(CHATS).document(chatId).collection(MESSAGE)
             .addSnapshotListener { value, error ->
-                if(error!=null){
+                if (error != null) {
                     handleException(error)
 
                 }
-                if(value!=null){
+                if (value != null) {
                     chatMessages.value = value.documents.mapNotNull {
                         it.toObject<Message>()
                     }.sortedBy { it.timestamp }
-                    //inProgressChatMessage.value = false
+                    generateSmartReplies(chatMessages.value) // Generate smart replies
                 }
             }
     }
@@ -75,6 +77,23 @@ class LCViewModel @Inject constructor(
         chatMessages.value = listOf()
         currentChatMessageListener = null
     }
+
+
+    fun generateSmartReplies(messages: List<Message>) {
+        val replies = messages.flatMap { message ->
+            when {
+
+                message.message?.contains("hello", ignoreCase = true) == true -> listOf("Hi there!")
+                message.message?.contains("how are you", ignoreCase = true) == true -> listOf("I'm good, thanks!")
+                // Add more conditions based on your use case
+                else -> listOf()
+            }
+        }.distinct()
+
+        smartReplies.value = replies
+    }
+
+
 
     fun populateChats() {
         db.collection(CHATS).where(
@@ -95,12 +114,25 @@ class LCViewModel @Inject constructor(
         }
     }
 
+
     fun onSendReply(chatId: String, message: String) {
+        if (message.isEmpty()) {
+            handleException(customMessage = "Message cannot be empty")
+            return
+        }
+
         val time = Calendar.getInstance().time.toString()
         val msg = Message(userData.value?.userId, message, time)
 
-        db.collection(CHATS).document(chatId).collection(MESSAGE).document().set(msg)
+        db.collection(CHATS).document(chatId).collection(MESSAGE).add(msg)
+            .addOnSuccessListener {
+                Log.d("TAG", "Message sent successfully")
+            }
+            .addOnFailureListener {
+                handleException(it, "Failed to send message")
+            }
     }
+
 
     fun signUp(name: String, number: String, email: String, password: String) {
         inProgress.value = true
@@ -288,4 +320,3 @@ class LCViewModel @Inject constructor(
         }
     }
 }
-

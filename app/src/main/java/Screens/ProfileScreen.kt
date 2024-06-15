@@ -2,6 +2,7 @@ package screens
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,12 +14,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
@@ -30,10 +33,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.afinal.DestinationScreen
+import com.example.afinal.R
 import com.example.afinal.commonDivider
 import com.example.afinal.commonImage
 import com.example.afinal.navigateTo
@@ -41,86 +46,87 @@ import com.example.afinal.ui.theme.LCViewModel
 
 @Composable
 fun ProfileScreen(navController: NavController, vm: LCViewModel) {
-
     val userData = vm.userData.value
-    var name by rememberSaveable {
-        mutableStateOf(userData?.name?:"")
-    }
-    var number by rememberSaveable {
-        mutableStateOf(userData?.number?:"")
-    }
-    Column {
-        ProfileContent(
+    var name by rememberSaveable { mutableStateOf(userData?.name ?: "") }
+    var number by rememberSaveable { mutableStateOf(userData?.number ?: "") }
 
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        ProfileContent(
             modifier = Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(8.dp),
+                .padding(16.dp),
             vm = vm,
             name = name,
             number = number,
-            onNameChange = {name = it},
-            onNumberChange = {number = it},
-            onSave = {
-                     vm.createOrUpdateProfile(
-                         name = name,
-                         number = number
-                     )
-            },
-            onBack = {
-
-                     navigateTo(navController,DestinationScreen.ChatList.route)
-            },
+            onNameChange = { name = it },
+            onNumberChange = { number = it },
+            onSave = { vm.createOrUpdateProfile(name = name, number = number) },
+            onBack = { navigateTo(navController, DestinationScreen.ChatList.route) },
             onLogOut = {
                 vm.logout()
-                navigateTo(navController,DestinationScreen.Login.route)
+                navigateTo(navController, DestinationScreen.Login.route)
             }
-
         )
         BottomNavigationMenu(
             selectedItem = BottomNavigationItem.PROFILE,
-            navController = navController
+            navController = navController,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp)
         )
-
     }
-
-
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileContent(
     modifier: Modifier,
     vm: LCViewModel,
     name: String,
     number: String,
-    onNameChange:(String)->Unit,
-    onNumberChange:(String)->Unit,
+    onNameChange: (String) -> Unit,
+    onNumberChange: (String) -> Unit,
     onBack: () -> Unit,
     onSave: () -> Unit,
     onLogOut: () -> Unit
 ) {
-    val imageurl = vm.userData.value?.imageurl
+    val imageUrl = vm.userData.value?.imageurl
 
-    Column(modifier = modifier.fillMaxSize()) {
+    Column(modifier = modifier) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
+                .padding(vertical = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "Back",
-                Modifier.clickable { onBack.invoke() }
+            Icon(
+                painter = painterResource(id = R.drawable.ic_back),
+                contentDescription = "Back",
+                modifier = Modifier
+                    .size(24.dp)
+                    .clickable { onBack.invoke() }
             )
             Text(
-                text = "Save",
-                Modifier.clickable { onSave.invoke() }
+                text = "Edit Profile",
+                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
             )
+            Button(
+                onClick = { onSave.invoke() },
+                modifier = Modifier.height(40.dp)
+            ) {
+                Text("Save")
+            }
         }
 
         commonDivider()
 
-        ProfileImage(imageUrl = imageurl, vm = vm)
+        ProfileImage(imageUrl = imageUrl, vm = vm)
 
         commonDivider()
 
@@ -129,12 +135,12 @@ fun ProfileContent(
             onValueChange = onNameChange,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(vertical = 8.dp),
             label = { Text("Name") },
-            colors = TextFieldDefaults.colors(
-                focusedTextColor = Color.Black,
-                focusedLabelColor = Color.Black,
-                cursorColor = Color.Black
+            colors = TextFieldDefaults.textFieldColors(
+                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                focusedLabelColor = MaterialTheme.colorScheme.primary,
+                cursorColor = MaterialTheme.colorScheme.primary
             )
         )
 
@@ -143,12 +149,12 @@ fun ProfileContent(
             onValueChange = onNumberChange,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(vertical = 8.dp),
             label = { Text("Number") },
-            colors = TextFieldDefaults.colors(
-                focusedTextColor = Color.Black,
-                focusedLabelColor = Color.Black,
-                cursorColor = Color.Black
+            colors = TextFieldDefaults.textFieldColors(
+                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                focusedLabelColor = MaterialTheme.colorScheme.primary,
+                cursorColor = MaterialTheme.colorScheme.primary
             )
         )
 
@@ -157,19 +163,17 @@ fun ProfileContent(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(vertical = 16.dp),
             horizontalArrangement = Arrangement.Center
         ) {
-            Text(
-                text = "LogOut",
-                modifier = Modifier.clickable { onLogOut.invoke() }
-            )
+            Button(onClick = { onLogOut.invoke() }) {
+                Text(text = "Log Out")
+            }
         }
     }
 }
 
 @Composable
-
 fun ProfileImage(imageUrl: String?, vm: LCViewModel) {
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -179,23 +183,30 @@ fun ProfileImage(imageUrl: String?, vm: LCViewModel) {
         }
     }
 
-    Box(modifier = Modifier.height(intrinsicSize = IntrinsicSize.Min)) {
+    Box(modifier = Modifier.height(IntrinsicSize.Min)) {
         Column(
             modifier = Modifier
-                .padding(8.dp)
+                .padding(vertical = 16.dp)
                 .fillMaxWidth()
-                .clickable {
-                    launcher.launch("image/*")
-                }, horizontalAlignment = Alignment.CenterHorizontally
+                .clickable { launcher.launch("image/*") },
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Card(
-                shape = CircleShape, modifier = Modifier
+                shape = CircleShape,
+                modifier = Modifier
                     .padding(8.dp)
                     .size(100.dp)
             ) {
                 commonImage(data = imageUrl)
             }
-            Text(text = "Change Profile Picture")
+            Text(
+                text = "Change Profile Picture",
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                ),
+                modifier = Modifier.padding(top = 8.dp)
+            )
         }
     }
 }

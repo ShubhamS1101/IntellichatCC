@@ -24,6 +24,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.HorizontalAlignmentLine
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -90,8 +91,8 @@ fun CheckSignedIn(vm: LCViewModel, navController: NavController) {
 }
 
 @Composable
-fun TitleText(txt: String) {
-    Text(text = txt, fontWeight = FontWeight.Bold, fontSize = 35.sp, modifier = Modifier.padding())
+fun TitleText(txt: String, modifier: Modifier) {
+    Text(text = txt, fontWeight = FontWeight.Bold, fontSize = 35.sp, modifier = Modifier.padding(start = 16.dp))
 }
 
 @Composable

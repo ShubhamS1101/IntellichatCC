@@ -1,7 +1,6 @@
 package screens
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 
 import androidx.compose.foundation.layout.Row
@@ -19,7 +18,6 @@ import androidx.navigation.NavController
 import com.example.afinal.R
 import com.example.afinal.DestinationScreen
 import com.example.afinal.navigateTo
-import kotlinx.coroutines.selects.select
 
 
 enum class BottomNavigationItem(val icon: Int, val navDestination: DestinationScreen) {
@@ -31,7 +29,8 @@ enum class BottomNavigationItem(val icon: Int, val navDestination: DestinationSc
 @Composable
 fun BottomNavigationMenu(
     selectedItem: BottomNavigationItem,
-    navController: NavController
+    navController: NavController,
+    modifier: Modifier
 ) {
     Row(
         modifier = Modifier
